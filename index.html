@@ -609,10 +609,18 @@
   var DIFF_MULT = { easy: 1.0, normal: 1.15, hard: 1.35 };
   var LANES = [18, 50, 82];
   var DANGER_OFFSET = 62;
+  // PC(물리 키보드) 기준 수치
   var DIFF = {
-    easy:   { label: '쉬움',   fallSpeed: 40, spawnInterval: 2700, maxConcurrent: 2 },
-    normal: { label: '보통',   fallSpeed: 60, spawnInterval: 2150, maxConcurrent: 3 },
-    hard:   { label: '어려움', fallSpeed: 86, spawnInterval: 1700, maxConcurrent: 3 }
+    easy:   { label: '쉬움',   fallSpeed: 34, spawnInterval: 3000, maxConcurrent: 2 },
+    normal: { label: '보통',   fallSpeed: 50, spawnInterval: 2500, maxConcurrent: 3 },
+    hard:   { label: '어려움', fallSpeed: 76, spawnInterval: 1900, maxConcurrent: 3 }
+  };
+  // 모바일(가상 키보드) 전용 수치 — 폰으로 10~15자 문장 하나를 치고 확정하는 데
+  // 5초 안팎이 걸리는 것을 기준으로 잡았다
+  var MOBILE_DIFF = {
+    easy:   { label: '쉬움',   fallSpeed: 16, spawnInterval: 6200, maxConcurrent: 2 },
+    normal: { label: '보통',   fallSpeed: 24, spawnInterval: 5200, maxConcurrent: 2 },
+    hard:   { label: '어려움', fallSpeed: 38, spawnInterval: 3600, maxConcurrent: 3 }
   };
   var LB_KEY = 'hanme-typing-leaderboard-v1';
 
@@ -854,17 +862,9 @@
     }
   }
 
-  // 모바일 가상 키보드는 물리 키보드보다 훨씬 느리다 — 화면 모드가 모바일이면
-  // 낙하 속도·생성 간격·동시 구절 수를 손끝 속도에 맞게 낮춘다.
+  // 화면 모드에 맞는 난이도 수치 — 모바일은 전용 표 사용
   function tunedDiff() {
-    var d = DIFF[state.difficulty];
-    if (state.view !== 'mobile') return d;
-    return {
-      label: d.label,
-      fallSpeed: d.fallSpeed * 0.55,
-      spawnInterval: d.spawnInterval * 1.9,
-      maxConcurrent: state.difficulty === 'hard' ? 3 : 2
-    };
+    return (state.view === 'mobile' ? MOBILE_DIFF : DIFF)[state.difficulty];
   }
 
   function initRuntime(queue, opts) {
@@ -960,7 +960,7 @@
     // 모바일은 파도 가속도 절반, 생성 간격 하한도 넉넉하게
     var isMobileView = state.view === 'mobile';
     var waveSpeedMult = rt.endless ? (1 + (rt.wave - 1) * (isMobileView ? 0.04 : 0.08)) : 1;
-    var spawnFloor = isMobileView ? 2000 : 1100;
+    var spawnFloor = isMobileView ? 3000 : 1300;
     var spawnInterval = rt.endless ? Math.max(spawnFloor, rt.diff.spawnInterval * (1 - (rt.wave - 1) * 0.05)) : rt.diff.spawnInterval;
     if (rt.endless && rt.queue.length < 4) {
       rt.wave++;
