@@ -854,6 +854,19 @@
     }
   }
 
+  // 모바일 가상 키보드는 물리 키보드보다 훨씬 느리다 — 화면 모드가 모바일이면
+  // 낙하 속도·생성 간격·동시 구절 수를 손끝 속도에 맞게 낮춘다.
+  function tunedDiff() {
+    var d = DIFF[state.difficulty];
+    if (state.view !== 'mobile') return d;
+    return {
+      label: d.label,
+      fallSpeed: d.fallSpeed * 0.55,
+      spawnInterval: d.spawnInterval * 1.9,
+      maxConcurrent: state.difficulty === 'hard' ? 3 : 2
+    };
+  }
+
   function initRuntime(queue, opts) {
     var field = $('fall-field');
     Array.prototype.slice.call(field.querySelectorAll('.phrase, .popup')).forEach(function (n) { n.remove(); });
@@ -863,7 +876,7 @@
       stageIdx: opts.stageIdx,
       endless: !!opts.endless,
       wave: 1,
-      diff: DIFF[state.difficulty],
+      diff: tunedDiff(),
       queue: queue,
       total: queue.length,
       active: [],
@@ -944,8 +957,11 @@
 
     if (!rt.lastSpawnTime) rt.lastSpawnTime = ts;
     // 보너스: 파도(wave)가 오를수록 빨라지고, 구절이 바닥나면 새 파도로 채운다
-    var waveSpeedMult = rt.endless ? (1 + (rt.wave - 1) * 0.08) : 1;
-    var spawnInterval = rt.endless ? Math.max(1100, rt.diff.spawnInterval * (1 - (rt.wave - 1) * 0.05)) : rt.diff.spawnInterval;
+    // 모바일은 파도 가속도 절반, 생성 간격 하한도 넉넉하게
+    var isMobileView = state.view === 'mobile';
+    var waveSpeedMult = rt.endless ? (1 + (rt.wave - 1) * (isMobileView ? 0.04 : 0.08)) : 1;
+    var spawnFloor = isMobileView ? 2000 : 1100;
+    var spawnInterval = rt.endless ? Math.max(spawnFloor, rt.diff.spawnInterval * (1 - (rt.wave - 1) * 0.05)) : rt.diff.spawnInterval;
     if (rt.endless && rt.queue.length < 4) {
       rt.wave++;
       rt.queue = rt.queue.concat(buildEndlessBatch());
@@ -1116,6 +1132,14 @@
     }
     renderHighlights();
     input.classList.toggle('mistype', nval.length > 0 && candidates.length === 0);
+
+    // 모바일 스페이스 확정: 한글 조합 중에는 스페이스 키다운이 isComposing으로
+    // 들어와 키 핸들러가 못 잡는다. 대신 "끝에 공백이 찍혔고, 공백 앞 내용이
+    // 정답이며, 공백으로 이어지는 구절이 없으면" 입력 이벤트에서 바로 확정한다.
+    if (/\s$/.test(val)) {
+      var done = exactPhraseFor(val);
+      if (done && !nextCharacterCanBeSpace(val)) submitInput();
+    }
   }
 
   // 확정 시 비교도 정규화(NFC·공백·끝 문장부호 관용)로 — 모바일 자판 편차 흡수
