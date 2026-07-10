@@ -27,6 +27,8 @@
     font-family: 'Nanum Gothic Coding', monospace;
     -webkit-text-size-adjust: 100%;
     user-select: none;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   h1, h2, .display-font { font-family: 'Do Hyeon', sans-serif; font-weight: 400; }
   button { touch-action: manipulation; }
@@ -241,6 +243,15 @@
 
   .hidden { display: none !important; }
 
+  /* ---------- PC 버전 (넓은 창, 큰 글씨, 키보드 중심) ---------- */
+  body.pc .win98 { width: min(94vw, 760px); }
+  body.pc .win-body { padding: 22px 30px 26px; }
+  body.pc .verse-box { max-height: 42vh; font-size: 14px; }
+  body.pc .phrase { font-size: 17px; max-width: min(70vw, 560px); }
+  body.pc #hud { font-size: 14px; }
+  body.pc #hud-nick { max-width: 30vw; }
+  body.pc #typing-input { font-size: 18px; }
+
   @media (max-width: 420px) {
     .win-body { padding: 14px 12px 18px; }
     .stage-preview { font-size: 11px; }
@@ -257,20 +268,27 @@
       <div class="win-titlebar"><span>한메타자교실.exe</span><div class="win-btns"><span>_</span><span>&#9633;</span><span class="x">&times;</span></div></div>
       <div class="win-body">
         <h1>두유 노우<br /><b>한메 타자교실?</b></h1>
-        <p class="tag">베드로의 네 장면, 손끝으로 새기는 한글 타자 게임</p>
+        <p class="tag">베드로의 네 장면,<br />손끝으로 새기는 한글 타자 게임</p>
         <div class="lb-teaser" id="lb-teaser"></div>
 
         <div class="opt-group">
           <p class="opt-label">1. 부서를 골라주세요</p>
           <div class="opt-row dept-row" id="dept-row">
-            <button data-dept="송림 청소년" class="opt-btn">송림<br />청소년</button>
-            <button data-dept="서현 중등부" class="opt-btn">서현<br />중등부</button>
-            <button data-dept="서현 고등부" class="opt-btn">서현<br />고등부</button>
+            <button data-dept="송림 청소년" class="opt-btn">송림 청소년</button>
+            <button data-dept="서현 중등부" class="opt-btn">서현 중등부</button>
+            <button data-dept="서현 고등부" class="opt-btn">서현 고등부</button>
           </div>
         </div>
         <div class="opt-group">
           <p class="opt-label">2. 닉네임을 입력해주세요</p>
-          <input type="text" id="nick-input" class="nick-input" placeholder="닉네임 (최대 10자)" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          <input type="text" id="nick-input" class="nick-input" placeholder="닉네임 (최대 4자)" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        </div>
+        <div class="opt-group">
+          <p class="opt-label">화면 모드</p>
+          <div class="opt-row" id="view-row">
+            <button data-view="mobile" class="opt-btn">📱 모바일</button>
+            <button data-view="pc" class="opt-btn">🖥️ PC 버전</button>
+          </div>
         </div>
         <div class="opt-group">
           <p class="opt-label">난이도</p>
@@ -621,6 +639,27 @@
   }
   wireOptRow('dept-row', 'dept', 'data-dept');
   wireOptRow('diff-row', 'difficulty', 'data-diff');
+  wireOptRow('view-row', 'view', 'data-view');
+
+  // ---------------- 화면 모드 (모바일/PC) — 자동 감지 + 토글 저장 ----------------
+  var VIEW_KEY = 'hanme-typing-view-v1';
+  function applyView(view) {
+    document.body.classList.toggle('pc', view === 'pc');
+    var btns = $('view-row').querySelectorAll('.opt-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-view') === view);
+    }
+    if (rt) recomputeDangerY();
+  }
+  var savedView = null;
+  try { savedView = localStorage.getItem(VIEW_KEY); } catch (e) {}
+  state.view = (savedView === 'pc' || savedView === 'mobile') ? savedView
+    : (window.matchMedia && matchMedia('(pointer: fine)').matches ? 'pc' : 'mobile');
+  applyView(state.view);
+  $('view-row').addEventListener('click', function () {
+    applyView(state.view);
+    try { localStorage.setItem(VIEW_KEY, state.view); } catch (e) {}
+  });
 
   $('nick-input').addEventListener('input', function () {
     $('nick-input').classList.remove('err');
@@ -638,7 +677,7 @@
   }
 
   $('btn-start').addEventListener('click', function () {
-    var nick = $('nick-input').value.trim();
+    var nick = $('nick-input').value.trim().slice(0, 4);
     var ok = true;
     if (!state.dept) { $('dept-row').classList.add('err'); ok = false; }
     if (!nick) { $('nick-input').classList.add('err'); ok = false; }
