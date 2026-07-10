@@ -218,11 +218,41 @@
     border: 2px solid #7c93bd; background: #22304f; color: #cfe0ff;
     font-size: 20px; line-height: 1; cursor: pointer;
   }
-  #btn-pause {
+  #btn-pause, #btn-mute {
     flex: none; min-width: 34px; height: 30px; margin-left: 2px;
     border-radius: 4px; border: 1px solid #7c93bd;
     background: rgba(255,255,255,0.12); color: #fff;
     font-size: 12px; line-height: 1; cursor: pointer;
+  }
+  #hud-progress { color: rgba(255,255,255,0.75); }
+  .quit-btn {
+    font-family: 'Nanum Gothic Coding', monospace; font-weight: 700;
+    font-size: 12px; padding: 9px 14px; border-radius: 4px; cursor: pointer;
+    background: transparent; color: #667; border: 1px dashed #9ab;
+  }
+  .phrase .ref {
+    display: block; font-size: 10px; font-weight: 400;
+    color: #8a5a10; letter-spacing: 0.02em; margin-bottom: 1px;
+  }
+  .phrase.danger { border-color: var(--red-bright); animation: danger-pulse 0.45s infinite alternate; }
+  @keyframes danger-pulse {
+    from { box-shadow: 2px 3px 0 rgba(0,0,0,0.25); background: rgba(255,255,255,0.92); }
+    to { box-shadow: 0 0 14px rgba(224,71,58,0.8); background: #ffeceb; }
+  }
+  .popup.praise {
+    font-size: 21px; color: #fff; left: 50% !important; transform: translateX(-50%);
+    text-shadow: 0 0 10px rgba(255,207,77,0.9), 1px 2px 2px rgba(0,0,0,0.7);
+    animation: praise-float 1.1s ease-out forwards;
+  }
+  @keyframes praise-float {
+    0% { opacity: 0; margin-top: 10px; }
+    15% { opacity: 1; margin-top: 0; }
+    100% { opacity: 0; margin-top: -36px; }
+  }
+  #final-grade {
+    margin: 0; font-family: 'Do Hyeon', sans-serif; font-size: 15px;
+    color: var(--gold); background: #fff7e0; border: 1px solid var(--gold);
+    border-radius: 4px; padding: 5px 12px;
   }
 
   #pause-overlay {
@@ -315,6 +345,7 @@
           <li>2. 고백 — 마태복음 16:13-18</li>
           <li>3. 부인 — 누가복음 22:55-62</li>
           <li>4. 회복 — 요한복음 21:15-17</li>
+          <li>★ 보너스 — 이어지는 말씀 (무한 도전)</li>
         </ol>
 
         <p class="form-err" id="form-err"></p>
@@ -341,12 +372,14 @@
     <div id="hud">
       <div class="hud-left">
         <span id="hud-stage-lbl">1/4 부르심</span>
+        <span id="hud-progress"></span>
         <span id="hud-nick"></span>
       </div>
       <div id="hud-lives">♥♥♥</div>
       <div class="hud-right">
         <span>점수 <b id="hud-score">0</b></span>
         <span id="hud-combo" class="hidden">콤보 &times;0</span>
+        <button id="btn-mute" title="소리 켬/끔">&#128266;</button>
         <button id="btn-pause" title="잠시 멈춤">&#10074;&#10074;</button>
       </div>
     </div>
@@ -363,6 +396,7 @@
         <h2>잠시 멈춤</h2>
         <p style="font-size:12px;color:#667;margin:0;">Esc 키 또는 아래 버튼으로 다시 열 수 있어요</p>
         <button id="btn-resume" class="start-btn">계속하기</button>
+        <button id="btn-quit" class="quit-btn">처음으로 (기록 없이 그만두기)</button>
       </div></div>
     </div>
   </section>
@@ -379,6 +413,7 @@
         <div><span class="stat-num" id="sr-combo">0</span><span class="stat-lbl">최대 콤보</span></div>
       </div>
       <button id="btn-next-stage" class="start-btn">다음 장면 ▶</button>
+      <button id="btn-finish" class="quit-btn hidden">여기서 기록 마치기</button>
     </div></div>
   </section>
 
@@ -386,6 +421,7 @@
   <section id="scr-final" class="screen">
     <div class="win98"><div class="win-body center">
       <h2 id="final-headline">완주!</h2>
+      <p id="final-grade"></p>
       <p class="final-section-title">내 기록</p>
       <div id="final-table"></div>
       <p class="final-section-title">역대 TOP 5</p>
@@ -529,7 +565,48 @@
     }
   ];
 
+  // ---------------------------------------------------------------
+  // 보너스 — 이어지는 말씀: 성경 곳곳의 주요 구절 (개역개정)
+  // 각 구절은 원문 그대로의 연속된 조각으로 나눔 (조각 순서 유지)
+  // ---------------------------------------------------------------
+  var ENDLESS_POOL = [
+    { ref: '창 1:1', parts: ['태초에 하나님이 천지를 창조하시니라'] },
+    { ref: '수 1:9', parts: ['강하고 담대하라', '두려워하지 말며 놀라지 말라', '네가 어디로 가든지', '네 하나님 여호와가 너와 함께 하느니라'] },
+    { ref: '시 1:1-2', parts: ['복 있는 사람은', '악인들의 꾀를 따르지 아니하며', '오직 여호와의 율법을 즐거워하여', '그의 율법을 주야로 묵상하는도다'] },
+    { ref: '시 23:1', parts: ['여호와는 나의 목자시니', '내게 부족함이 없으리로다'] },
+    { ref: '시 46:1', parts: ['하나님은 우리의 피난처시요 힘이시니', '환난 중에 만날 큰 도움이시라'] },
+    { ref: '시 119:105', parts: ['주의 말씀은 내 발에 등이요', '내 길에 빛이니이다'] },
+    { ref: '시 121:1-2', parts: ['내가 산을 향하여 눈을 들리라', '나의 도움이 어디서 올까', '나의 도움은 천지를 지으신', '여호와에게서로다'] },
+    { ref: '잠 3:5', parts: ['너는 마음을 다하여 여호와를 신뢰하고', '네 명철을 의지하지 말라'] },
+    { ref: '잠 3:6', parts: ['너는 범사에 그를 인정하라', '그리하면 네 길을 지도하시리라'] },
+    { ref: '사 41:10', parts: ['두려워하지 말라 내가 너와 함께 함이라', '놀라지 말라 나는 네 하나님이 됨이라', '내가 너를 굳세게 하리라', '참으로 너를 도와 주리라'] },
+    { ref: '렘 29:11', parts: ['너희를 향한 나의 생각을 내가 아나니', '평안이요 재앙이 아니니라', '너희에게 미래와 희망을 주는 것이니라'] },
+    { ref: '마 5:13-14', parts: ['너희는 세상의 소금이니', '너희는 세상의 빛이라'] },
+    { ref: '마 6:33', parts: ['그런즉 너희는 먼저', '그의 나라와 그의 의를 구하라', '그리하면 이 모든 것을', '너희에게 더하시리라'] },
+    { ref: '마 7:7', parts: ['구하라 그리하면 너희에게 주실 것이요', '찾으라 그리하면 찾아낼 것이요', '문을 두드리라', '그리하면 너희에게 열릴 것이니'] },
+    { ref: '마 11:28', parts: ['수고하고 무거운 짐 진 자들아', '다 내게로 오라', '내가 너희를 쉬게 하리라'] },
+    { ref: '마 22:37', parts: ['네 마음을 다하고 목숨을 다하고', '뜻을 다하여', '주 너의 하나님을 사랑하라'] },
+    { ref: '마 22:39', parts: ['네 이웃을 네 몸과 같이 사랑하라'] },
+    { ref: '요 1:1', parts: ['태초에 말씀이 계시니라', '이 말씀이 하나님과 함께 계셨으니', '이 말씀은 곧 하나님이시니라'] },
+    { ref: '요 3:16', parts: ['하나님이 세상을 이처럼 사랑하사', '독생자를 주셨으니', '이는 그를 믿는 자마다', '멸망하지 않고', '영생을 얻게 하려 하심이라'] },
+    { ref: '요 14:6', parts: ['내가 곧 길이요 진리요 생명이니', '나로 말미암지 않고는', '아버지께로 올 자가 없느니라'] },
+    { ref: '요 15:5', parts: ['나는 포도나무요 너희는 가지라', '나를 떠나서는 너희가', '아무 것도 할 수 없음이라'] },
+    { ref: '롬 8:28', parts: ['우리가 알거니와', '하나님을 사랑하는 자', '곧 그의 뜻대로 부르심을 입은 자들에게는', '모든 것이 합력하여 선을 이루느니라'] },
+    { ref: '롬 12:2', parts: ['너희는 이 세대를 본받지 말고', '오직 마음을 새롭게 함으로', '변화를 받아'] },
+    { ref: '고전 13:4', parts: ['사랑은 오래 참고 사랑은 온유하며', '시기하지 아니하며', '사랑은 자랑하지 아니하며', '교만하지 아니하며'] },
+    { ref: '고전 13:13', parts: ['이 세 가지는 항상 있을 것인데', '그 중의 제일은 사랑이라'] },
+    { ref: '고후 5:17', parts: ['누구든지 그리스도 안에 있으면', '새로운 피조물이라', '이전 것은 지나갔으니', '보라 새 것이 되었도다'] },
+    { ref: '갈 2:20', parts: ['내가 그리스도와 함께', '십자가에 못 박혔나니', '이제는 내가 사는 것이 아니요', '오직 내 안에 그리스도께서 사시는 것이라'] },
+    { ref: '엡 2:8', parts: ['너희는 그 은혜에 의하여', '믿음으로 말미암아 구원을 받았으니', '이것은 너희에게서 난 것이 아니요', '하나님의 선물이라'] },
+    { ref: '빌 4:13', parts: ['내게 능력 주시는 자 안에서', '내가 모든 것을 할 수 있느니라'] },
+    { ref: '살전 5:16-18', parts: ['항상 기뻐하라', '쉬지 말고 기도하라', '범사에 감사하라'] },
+    { ref: '딤후 3:16', parts: ['모든 성경은', '하나님의 감동으로 된 것으로', '교훈과 책망과 바르게 함과', '의로 교육하기에 유익하니'] },
+    { ref: '히 11:1', parts: ['믿음은 바라는 것들의 실상이요', '보이지 않는 것들의 증거니'] },
+    { ref: '벧전 5:7', parts: ['너희 염려를 다 주께 맡기라', '이는 그가 너희를 돌보심이라'] }
+  ];
+
   var STAGE_MULT = [1.0, 1.05, 1.2, 1.08];
+  var DIFF_MULT = { easy: 1.0, normal: 1.15, hard: 1.35 };
   var LANES = [18, 50, 82];
   var DANGER_OFFSET = 62;
   var DIFF = {
@@ -587,7 +664,12 @@
       osc.start(t0); osc.stop(t0 + dur + 0.02);
     } catch (e) { /* audio unavailable — silently skip */ }
   }
+  var SND_KEY = 'hanme-typing-sound-v1';
+  var muted = false;
+  try { muted = localStorage.getItem(SND_KEY) === 'off'; } catch (e) {}
+  function renderMute() { $('btn-mute').innerHTML = muted ? '&#128263;' : '&#128266;'; }
   function sfx(name) {
+    if (muted) return;
     if (name === 'clear') { beep(880, 0.08, 'triangle', 0.12); beep(1320, 0.09, 'triangle', 0.1, 0.05); }
     else if (name === 'miss') { beep(160, 0.28, 'sawtooth', 0.16); }
     else if (name === 'stageclear') { [523, 659, 784, 1046].forEach(function (f, i) { beep(f, 0.16, 'square', 0.12, i * 0.12); }); }
@@ -634,6 +716,8 @@
     nickname: '',
     difficulty: 'normal',
     currentStage: 0,
+    phase: 'stages',      // 'stages' | 'endless'
+    endlessResult: null,
     results: []
   };
 
@@ -681,6 +765,9 @@
   function resetEntryForm() {
     state.dept = null;
     state.nickname = '';
+    state.phase = 'stages';
+    state.endlessResult = null;
+    state.results = [];
     var deptBtns = $('dept-row').querySelectorAll('.opt-btn');
     for (var i = 0; i < deptBtns.length; i++) deptBtns[i].classList.remove('active');
     $('dept-row').classList.remove('err');
@@ -705,6 +792,8 @@
     getCtx(); sfx('start');
     state.currentStage = 0;
     state.results = [];
+    state.phase = 'stages';
+    state.endlessResult = null;
     startStage(0);
   });
 
@@ -717,6 +806,7 @@
 
   // ---------------- stage intro (tap-to-start, keeps mobile keyboard gesture) ----------------
   function startStage(stageIdx) {
+    state.phase = 'stages';
     state.currentStage = stageIdx;
     var stage = STAGES[stageIdx];
     $('si-tag').textContent = 'STAGE ' + (stageIdx + 1) + ' / ' + STAGES.length;
@@ -725,10 +815,21 @@
     $('si-verse').innerHTML = verseHTML(stage);
     showScreen('scr-stageintro');
   }
+  function startEndlessIntro() {
+    state.phase = 'endless';
+    $('si-tag').textContent = '★ 보너스 스테이지';
+    $('si-title').textContent = '이어지는 말씀';
+    $('si-ref').textContent = '창세기부터 베드로전서까지 — 개역개정';
+    $('si-verse').innerHTML = '네 장면의 말씀을 모두 지나왔습니다. 이제 성경 곳곳의 주요 구절들이 '
+      + '쉼 없이 내려옵니다. 물결은 점점 빨라지고, 하트 셋이 다할 때까지 계속됩니다. '
+      + '<b>얼마나 많은 말씀을 새길 수 있을까요?</b>';
+    showScreen('scr-stageintro');
+  }
   $('btn-stage-go').addEventListener('click', function () {
-    var stageIdx = state.currentStage;
     showScreen('scr-game');
-    beginGameplay(stageIdx); // focuses input synchronously — keeps this a user gesture for mobile keyboards
+    // 탭 제스처 체인 안에서 동기적으로 입력창을 포커스해야 모바일 키보드가 뜬다
+    if (state.phase === 'endless') beginEndless();
+    else beginGameplay(state.currentStage);
   });
 
   // ---------------- gameplay ----------------
@@ -743,6 +844,7 @@
   function updateHud() {
     $('hud-score').textContent = rt.score;
     $('hud-lives').innerHTML = heartsHTML(rt.lives);
+    $('hud-progress').textContent = rt.endless ? ('말씀 ' + rt.cleared) : (rt.cleared + '/' + rt.total);
     var comboEl = $('hud-combo');
     if (rt.combo > 1) {
       comboEl.classList.remove('hidden');
@@ -752,22 +854,18 @@
     }
   }
 
-  function beginGameplay(stageIdx) {
-    var stage = STAGES[stageIdx];
-    var diff = DIFF[state.difficulty];
+  function initRuntime(queue, opts) {
     var field = $('fall-field');
-    var danger = $('danger-line');
     Array.prototype.slice.call(field.querySelectorAll('.phrase, .popup')).forEach(function (n) { n.remove(); });
-
-    $('game-bg').className = 'bg-' + stageIdx;
-    $('hud-stage-lbl').textContent = (stageIdx + 1) + '/' + STAGES.length + ' ' + stage.title.split(' — ')[0];
     $('hud-nick').textContent = state.nickname;
 
     rt = {
-      stageIdx: stageIdx,
-      diff: diff,
-      queue: stage.lines.slice(),
-      total: stage.lines.length,
+      stageIdx: opts.stageIdx,
+      endless: !!opts.endless,
+      wave: 1,
+      diff: DIFF[state.difficulty],
+      queue: queue,
+      total: queue.length,
       active: [],
       lives: 3,
       score: 0,
@@ -787,7 +885,7 @@
       ended: false
     };
 
-    danger.style.bottom = DANGER_OFFSET + 'px';
+    $('danger-line').style.bottom = DANGER_OFFSET + 'px';
     recomputeDangerY();
     updateHud();
 
@@ -799,6 +897,36 @@
     input.focus(); // synchronous — called directly from the tap handler chain
 
     rt.rafId = requestAnimationFrame(gameLoop);
+  }
+
+  function beginGameplay(stageIdx) {
+    var stage = STAGES[stageIdx];
+    $('game-bg').className = 'bg-' + stageIdx;
+    $('hud-stage-lbl').textContent = (stageIdx + 1) + '/' + STAGES.length + ' ' + stage.title.split(' — ')[0];
+    initRuntime(stage.lines.slice(), { stageIdx: stageIdx });
+  }
+
+  function shuffled(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  // 구절(그룹) 순서는 섞되, 한 구절 안의 조각 순서는 원문 그대로 유지
+  function buildEndlessBatch() {
+    var items = [];
+    shuffled(ENDLESS_POOL).forEach(function (g) {
+      g.parts.forEach(function (p) { items.push({ ref: g.ref, text: p }); });
+    });
+    return items;
+  }
+
+  function beginEndless() {
+    $('game-bg').className = 'bg-3';
+    $('hud-stage-lbl').textContent = '★ 보너스';
+    initRuntime(buildEndlessBatch(), { stageIdx: 3, endless: true });
   }
 
   function recomputeDangerY() {
@@ -815,36 +943,61 @@
     rt.lastFrame = ts;
 
     if (!rt.lastSpawnTime) rt.lastSpawnTime = ts;
-    if (rt.queue.length && rt.active.length < rt.diff.maxConcurrent && (ts - rt.lastSpawnTime) > rt.diff.spawnInterval) {
+    // 보너스: 파도(wave)가 오를수록 빨라지고, 구절이 바닥나면 새 파도로 채운다
+    var waveSpeedMult = rt.endless ? (1 + (rt.wave - 1) * 0.08) : 1;
+    var spawnInterval = rt.endless ? Math.max(1100, rt.diff.spawnInterval * (1 - (rt.wave - 1) * 0.05)) : rt.diff.spawnInterval;
+    if (rt.endless && rt.queue.length < 4) {
+      rt.wave++;
+      rt.queue = rt.queue.concat(buildEndlessBatch());
+    }
+    if (rt.queue.length && rt.active.length < rt.diff.maxConcurrent && (ts - rt.lastSpawnTime) > spawnInterval) {
       spawnPhrase();
       rt.lastSpawnTime = ts;
     }
 
-    var speed = rt.diff.fallSpeed * STAGE_MULT[rt.stageIdx];
+    var speed = rt.diff.fallSpeed * (rt.endless ? 1.0 : STAGE_MULT[rt.stageIdx]) * waveSpeedMult;
     for (var i = rt.active.length - 1; i >= 0; i--) {
       var p = rt.active[i];
       p.y += speed * (dt / 1000);
       p.el.style.transform = 'translate(-50%, ' + p.y + 'px)';
+      p.el.classList.toggle('danger', p.y >= rt.dangerY * 0.7);
       if (p.y >= rt.dangerY) missPhrase(p);
     }
 
-    if (rt.queue.length === 0 && rt.active.length === 0) { endStage(); return; }
+    if (!rt.endless && rt.queue.length === 0 && rt.active.length === 0) { endStage(); return; }
     if (rt.lives <= 0) { endStage(); return; }
 
     rt.rafId = requestAnimationFrame(gameLoop);
   }
 
   function spawnPhrase() {
-    var text = rt.queue.shift();
+    var item = rt.queue.shift();
+    var text = typeof item === 'string' ? item : item.text;
+    var ref = typeof item === 'string' ? null : item.ref;
     var lane = LANES[rt.spawnCounter % LANES.length];
     rt.spawnCounter++;
     var el = document.createElement('div');
     el.className = 'phrase';
     el.style.left = lane + '%';
     el.style.transform = 'translate(-50%, -40px)';
-    el.innerHTML = '<span class="matched"></span><span class="rest"></span>';
-    el.querySelector('.rest').textContent = text;
-    $('fall-field').appendChild(el);
+    if (ref) {
+      var refEl = document.createElement('span');
+      refEl.className = 'ref';
+      refEl.textContent = ref;
+      el.appendChild(refEl);
+    }
+    var m = document.createElement('span'); m.className = 'matched';
+    var r = document.createElement('span'); r.className = 'rest';
+    r.textContent = text;
+    el.appendChild(m); el.appendChild(r);
+    var field = $('fall-field');
+    field.appendChild(el);
+    // 긴 구절이 가장자리 레인에서 화면 밖으로 잘리지 않게 중심점을 안쪽으로 클램프
+    var half = el.offsetWidth / 2;
+    var fieldW = field.clientWidth;
+    var cx = fieldW * (lane / 100);
+    cx = Math.max(half + 6, Math.min(fieldW - half - 6, cx));
+    el.style.left = (cx / fieldW * 100) + '%';
     rt.active.push({ text: text, y: -40, el: el, matchedLen: 0 });
   }
 
@@ -876,13 +1029,32 @@
     rt.combo++;
     rt.maxCombo = Math.max(rt.maxCombo, rt.combo);
     var progress = Math.max(0, Math.min(1, p.y / rt.dangerY));
-    var pts = p.text.length * 15 + Math.round((1 - progress) * 200) + rt.combo * 20;
+    var base = p.text.length * 15 + Math.round((1 - progress) * 200) + rt.combo * 20;
+    var pts = Math.round(base * DIFF_MULT[state.difficulty]);
     rt.score += pts;
     rt.cleared++;
     rt.totalClearedChars += p.text.length;
     updateHud();
     sfx('clear');
     showPopup('+' + pts, parseFloat(p.el.style.left), p.y);
+    if (rt.combo >= 5 && rt.combo % 5 === 0) showPraise(rt.combo);
+  }
+
+  var PRAISE = {
+    5: '착착 붙는 손끝! 🔥',
+    10: '갈릴리 폭풍 타자! 🌊',
+    15: '베드로도 감탄! 👀',
+    20: '말씀이 손에 붙었다! ✨',
+    25: '전설의 어부 등장! 🐟'
+  };
+  function showPraise(combo) {
+    var text = PRAISE[combo] || ('콤보 ' + combo + '! 멈추지 마! ⚡');
+    var pop = document.createElement('div');
+    pop.className = 'popup praise';
+    pop.style.top = '34%';
+    pop.textContent = text;
+    $('fall-field').appendChild(pop);
+    setTimeout(function () { pop.remove(); }, 1150);
   }
 
   function missPhrase(p) {
@@ -1015,10 +1187,23 @@
   $('btn-pause').addEventListener('click', function () {
     if (rt && !rt.ended && !rt.paused) pauseGame();
   });
+  $('btn-quit').addEventListener('click', function () {
+    if (rt) { rt.ended = true; cancelAnimationFrame(rt.rafId); }
+    $('pause-overlay').classList.add('hidden');
+    resetEntryForm();
+    renderTeaser();
+    showScreen('scr-title');
+  });
+  renderMute();
+  $('btn-mute').addEventListener('click', function () {
+    muted = !muted;
+    try { localStorage.setItem(SND_KEY, muted ? 'off' : 'on'); } catch (e) {}
+    renderMute();
+  });
 
   // 낙하 영역이나 HUD를 탭해도 입력창 포커스(=모바일 키보드)가 풀리지 않게
   function keepFocus(e) {
-    if (rt && !rt.ended && !rt.paused && e.target.id !== 'btn-pause') e.preventDefault();
+    if (rt && !rt.ended && !rt.paused && e.target.id !== 'btn-pause' && e.target.id !== 'btn-mute') e.preventDefault();
   }
   $('fall-field').addEventListener('pointerdown', keepFocus);
   $('hud').addEventListener('pointerdown', keepFocus);
@@ -1053,14 +1238,29 @@
     var elapsedMs = (performance.now() - rt.startTime) - rt.pausedDuration;
     var elapsedMin = Math.max(elapsedMs / 60000, 0.05);
     var cpm = Math.round(rt.totalClearedChars / elapsedMin);
+
+    if (rt.endless) {
+      state.endlessResult = { score: rt.score, cpm: cpm, cleared: rt.cleared, maxCombo: rt.maxCombo, wave: rt.wave };
+      $('sr-headline').textContent = '이어지는 말씀 — ' + rt.cleared + '구절을 새겼습니다';
+      $('sr-verse').innerHTML = '파도 ' + rt.wave + '까지 버텼습니다. 손끝에 남은 말씀이 '
+        + rt.cleared + '구절 — 오늘 새긴 말씀 중 하나라도 마음에 남았다면 그걸로 충분합니다.';
+      $('sr-score').textContent = rt.score;
+      $('sr-cpm').textContent = cpm;
+      $('sr-complete').textContent = rt.cleared + '구절';
+      $('sr-combo').textContent = rt.maxCombo;
+      $('btn-next-stage').textContent = '최종 결과 보기 ▶';
+      $('btn-finish').classList.add('hidden');
+      sfx('stageclear');
+      showScreen('scr-stageresult');
+      return;
+    }
+
     var completion = Math.round((rt.cleared / rt.total) * 100);
     var cleared = rt.cleared === rt.total;
-
-    var result = {
+    state.results[rt.stageIdx] = {
       score: rt.score, cpm: cpm, completion: completion, maxCombo: rt.maxCombo,
       cleared: cleared, elapsedMs: elapsedMs
     };
-    state.results[rt.stageIdx] = result;
 
     var stage = STAGES[rt.stageIdx];
     $('sr-headline').textContent = cleared ? (stage.title + ' — 완주!') : (stage.title + ' — 여기까지');
@@ -1070,42 +1270,76 @@
     $('sr-complete').textContent = completion + '%';
     $('sr-combo').textContent = rt.maxCombo;
 
+    var isLast = rt.stageIdx === STAGES.length - 1;
+    $('btn-next-stage').textContent = isLast ? '★ 보너스 도전 — 이어지는 말씀 ▶' : '다음 장면 ▶';
+    $('btn-finish').classList.toggle('hidden', !isLast);
+
     if (cleared) sfx('stageclear');
     showScreen('scr-stageresult');
   }
 
   $('btn-next-stage').addEventListener('click', function () {
+    // 더블탭 가드: 결과 화면이 떠 있을 때 첫 탭만 유효
+    if (!$('scr-stageresult').classList.contains('active')) return;
+    if (state.phase === 'endless') { showFinal(); return; }
     var next = state.currentStage + 1;
     if (next < STAGES.length) { startStage(next); }
-    else { showFinal(); }
+    else { startEndlessIntro(); }
+  });
+  $('btn-finish').addEventListener('click', function () {
+    if (!$('scr-stageresult').classList.contains('active')) return;
+    showFinal();
   });
 
   function totals() {
-    var score = 0, cpmSum = 0, n = state.results.length;
-    state.results.forEach(function (r) { if (!r) return; score += r.score; cpmSum += r.cpm; });
+    var score = 0, cpmSum = 0, n = 0;
+    state.results.forEach(function (r) { if (!r) return; score += r.score; cpmSum += r.cpm; n++; });
+    if (state.endlessResult) { score += state.endlessResult.score; cpmSum += state.endlessResult.cpm; n++; }
     return { score: score, avgCpm: n ? Math.round(cpmSum / n) : 0 };
+  }
+
+  // 총점에 따른 칭호 — 한메 감성 급수
+  function gradeFor(score) {
+    if (score >= 70000) return '★ 반석 위의 타자왕';
+    if (score >= 50000) return '새벽 바다의 명수';
+    if (score >= 35000) return '사람 낚는 어부';
+    if (score >= 20000) return '그물 던지는 어부';
+    if (score >= 8000) return '갈릴리 견습 어부';
+    return '그물 깁는 새싹';
+  }
+  function diffShort(d) {
+    return { easy: '쉬움', normal: '보통', hard: '어려움' }[d] || '-';
   }
 
   function showFinal() {
     var t = totals();
-    $('final-headline').textContent = state.nickname + '님, 완주! 총점 ' + t.score;
+    var allCleared = STAGES.every(function (s, i) { return state.results[i] && state.results[i].cleared; });
+    $('final-headline').textContent = state.nickname + '님, ' + (allCleared ? '완주!' : '도전 완료!') + ' 총점 ' + t.score;
+    $('final-grade').textContent = '칭호: ' + gradeFor(t.score);
 
     var rows = '<table><tr><th>장면</th><th>점수</th><th>타/분</th><th>완료율</th></tr>';
     STAGES.forEach(function (s, i) {
       var r = state.results[i] || { score: 0, cpm: 0, completion: 0 };
       rows += '<tr><td>' + (i + 1) + '. ' + s.title.split(' — ')[0] + '</td><td>' + r.score + '</td><td>' + r.cpm + '</td><td>' + r.completion + '%</td></tr>';
     });
+    if (state.endlessResult) {
+      var er = state.endlessResult;
+      rows += '<tr><td>★ 보너스</td><td>' + er.score + '</td><td>' + er.cpm + '</td><td>' + er.cleared + '구절</td></tr>';
+    }
     rows += '</table>';
     $('final-table').innerHTML = rows;
 
-    var saved = addLeaderboardEntry({ dept: state.dept, nickname: state.nickname, score: t.score, cpm: t.avgCpm });
+    var saved = addLeaderboardEntry({
+      dept: state.dept, nickname: state.nickname, score: t.score, cpm: t.avgCpm,
+      diff: state.difficulty, verses: state.endlessResult ? state.endlessResult.cleared : 0
+    });
     var top5 = saved.list.slice(0, 5);
-    var lbRows = '<table><tr><th>#</th><th>닉네임</th><th>부서</th><th>점수</th></tr>';
+    var lbRows = '<table><tr><th>#</th><th>닉네임</th><th>부서</th><th>난이도</th><th>점수</th></tr>';
     var medals = ['🥇', '🥈', '🥉'];
     top5.forEach(function (e, i) {
       var rankLabel = medals[i] || String(i + 1);
       var isMe = e.id === saved.entry.id;
-      lbRows += '<tr' + (isMe ? ' class="me"' : '') + '><td>' + rankLabel + '</td><td>' + escapeHtml(e.nickname) + '</td><td>' + escapeHtml(deptShort(e.dept)) + '</td><td>' + e.score + '</td></tr>';
+      lbRows += '<tr' + (isMe ? ' class="me"' : '') + '><td>' + rankLabel + '</td><td>' + escapeHtml(e.nickname) + '</td><td>' + escapeHtml(deptShort(e.dept)) + '</td><td>' + diffShort(e.diff) + '</td><td>' + e.score + '</td></tr>';
     });
     lbRows += '</table>';
     $('final-leaderboard').innerHTML = lbRows;
