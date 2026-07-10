@@ -213,6 +213,17 @@
     background: #fff; color: #182238; outline: none;
   }
   #typing-input.mistype { border-color: var(--red-bright); background: #ffe9e6; }
+  #btn-clearline {
+    flex: none; width: 42px; height: 42px; border-radius: 4px;
+    border: 2px solid #7c93bd; background: #22304f; color: #cfe0ff;
+    font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  #btn-pause {
+    flex: none; min-width: 34px; height: 30px; margin-left: 2px;
+    border-radius: 4px; border: 1px solid #7c93bd;
+    background: rgba(255,255,255,0.12); color: #fff;
+    font-size: 12px; line-height: 1; cursor: pointer;
+  }
 
   #pause-overlay {
     position: absolute; inset: 0; z-index: 5; display: flex;
@@ -336,6 +347,7 @@
       <div class="hud-right">
         <span>점수 <b id="hud-score">0</b></span>
         <span id="hud-combo" class="hidden">콤보 &times;0</span>
+        <button id="btn-pause" title="잠시 멈춤">&#10074;&#10074;</button>
       </div>
     </div>
     <div id="fall-field">
@@ -343,7 +355,8 @@
     </div>
     <div id="typing-bar">
       <span id="typing-caret">&gt;</span>
-      <input id="typing-input" type="text" placeholder="입력 후 Enter 또는 Space로 확정" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <input id="typing-input" type="text" placeholder="입력 후 Enter 또는 Space로 확정" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
+      <button id="btn-clearline" title="입력 지우기">&times;</button>
     </div>
     <div id="pause-overlay" class="hidden">
       <div class="win98"><div class="win-body center">
@@ -437,8 +450,8 @@
         '예수께서 빌립보 가이사랴 지방에 이르러',
         '제자들에게 물어 이르시되',
         '사람들이 인자를 누구라 하느냐',
-        '더러는 세례 요한,',
-        '더러는 엘리야,',
+        '더러는 세례 요한',
+        '더러는 엘리야',
         '어떤 이는 예레미야나 선지자 중의 하나라',
         '이르시되 너희는 나를 누구라 하느냐',
         '시몬 베드로가 대답하여 이르되',
@@ -882,34 +895,72 @@
     rt.combo = 0;
     updateHud();
     sfx('miss');
+    if (navigator.vibrate) navigator.vibrate(80);
     var field = $('fall-field');
     field.classList.remove('shake'); void field.offsetWidth; field.classList.add('shake');
+  }
+
+  // 모바일 한글 입력 보정:
+  // - NFC 정규화 (iOS 등에서 자소 분리된 한글이 눈에는 같아 보여도 === 비교에 실패)
+  // - 공백 정리 (앞뒤 공백, 연속 공백 허용)
+  // - 문장부호 관용 (구절 끝 쉼표·마침표는 안 쳐도 정답)
+  function normText(s) {
+    if (s.normalize) s = s.normalize('NFC');
+    return s.replace(/\s+/g, ' ').trim();
+  }
+  function normAnswer(s) {
+    return normText(s).replace(/[,.·!?]+$/, '');
+  }
+
+  var composing = false;
+  (function () {
+    var input = $('typing-input');
+    input.addEventListener('compositionstart', function () { composing = true; });
+    input.addEventListener('compositionend', function () { composing = false; handleInput(); });
+  })();
+
+  function clearInputSafely(input) {
+    input.value = '';
+    // 한글 조합 중에 value만 비우면 조합 중이던 마지막 글자가 빈 칸에 다시 들어와
+    // 다음 구절부터 계속 오답이 된다 — blur/focus로 조합을 강제 종료한다.
+    if (composing) {
+      input.blur();
+      input.focus();
+      composing = false;
+    }
   }
 
   function handleInput() {
     var input = $('typing-input');
     var val = input.value;
     if (!rt || rt.ended) return;
-    var candidates = rt.active.filter(function (p) { return val.length > 0 && p.text.indexOf(val) === 0; });
+    var nval = normText(val);
+    var candidates = rt.active.filter(function (p) {
+      return nval.length > 0 && normText(p.text).indexOf(nval) === 0;
+    });
     for (var i = 0; i < rt.active.length; i++) {
-      rt.active[i].matchedLen = candidates.indexOf(rt.active[i]) !== -1 ? val.length : 0;
+      var p = rt.active[i];
+      p.matchedLen = candidates.indexOf(p) !== -1 ? Math.min(nval.length, p.text.length) : 0;
     }
     renderHighlights();
-    input.classList.toggle('mistype', val.length > 0 && candidates.length === 0);
+    input.classList.toggle('mistype', nval.length > 0 && candidates.length === 0);
   }
 
+  // 확정 시 비교도 정규화(NFC·공백·끝 문장부호 관용)로 — 모바일 자판 편차 흡수
   function exactPhraseFor(value) {
-    if (!value || !rt) return null;
+    if (!rt) return null;
+    var aval = normAnswer(value);
+    if (!aval) return null;
     for (var i = 0; i < rt.active.length; i++) {
-      if (rt.active[i].text === value) return rt.active[i];
+      if (normAnswer(rt.active[i].text) === aval) return rt.active[i];
     }
     return null;
   }
 
   function nextCharacterCanBeSpace(value) {
     if (!rt) return false;
-    var withSpace = value + ' ';
-    return rt.active.some(function (p) { return p.text.indexOf(withSpace) === 0; });
+    var withSpace = normText(value) + ' ';
+    return rt.active.some(function (p) { return normText(p.text).indexOf(withSpace) === 0; });
   }
 
   // 문장을 완성해도 즉시 사라지지 않는다. Enter 또는 마지막 Space로만 확정한다.
@@ -936,7 +987,7 @@
     }
 
     clearPhrase(exact);
-    input.value = '';
+    clearInputSafely(input);
     input.classList.remove('mistype');
     handleInput();
   }
@@ -948,6 +999,7 @@
     if (rt.paused) resumeGame(); else pauseGame();
   });
   function pauseGame() {
+    if (rt.paused) return;
     rt.paused = true;
     rt.pauseStartedAt = performance.now();
     $('pause-overlay').classList.remove('hidden');
@@ -960,6 +1012,35 @@
     $('typing-input').focus();
   }
   $('btn-resume').addEventListener('click', resumeGame);
+  $('btn-pause').addEventListener('click', function () {
+    if (rt && !rt.ended && !rt.paused) pauseGame();
+  });
+
+  // 낙하 영역이나 HUD를 탭해도 입력창 포커스(=모바일 키보드)가 풀리지 않게
+  function keepFocus(e) {
+    if (rt && !rt.ended && !rt.paused && e.target.id !== 'btn-pause') e.preventDefault();
+  }
+  $('fall-field').addEventListener('pointerdown', keepFocus);
+  $('hud').addEventListener('pointerdown', keepFocus);
+
+  // 키보드가 실제로 닫혀 입력이 불가능해지면 (blur 상태 유지) 자동 일시정지
+  $('typing-input').addEventListener('blur', function () {
+    setTimeout(function () {
+      if (rt && !rt.ended && !rt.paused && document.activeElement !== $('typing-input')) pauseGame();
+    }, 120);
+  });
+
+  // ✕ 버튼: 오타 한 번에 지우기 — pointerdown에서 preventDefault로 포커스 유지
+  $('btn-clearline').addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    var input = $('typing-input');
+    clearInputSafely(input);
+    input.classList.remove('mistype');
+    if (rt && !rt.ended) {
+      for (var i = 0; i < rt.active.length; i++) rt.active[i].matchedLen = 0;
+      renderHighlights();
+    }
+  });
 
   // ---------------- stage end / results ----------------
   function endStage() {
