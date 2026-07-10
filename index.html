@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>두유 노우 한메 타자교실? — 베드로 네 장면 타자 대결</title>
-<meta name="description" content="마태복음 4장·16장, 누가복음 22장, 요한복음 21장 — 베드로의 네 장면을 떨어지는 구절 타자로 새기는 대결 게임." />
+<meta name="description" content="마태복음 4장·16장, 누가복음 22장, 요한복음 21장 — 베드로의 네 장면을 떨어지는 구절 타자로 새기는 게임." />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⌨️</text></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,17 +20,18 @@
     --win-face: #d7e3f7;
     --ink: #182238;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
     background: #0b1330; color: var(--ink);
     font-family: 'Nanum Gothic Coding', monospace;
     -webkit-text-size-adjust: 100%;
     user-select: none;
   }
   h1, h2, .display-font { font-family: 'Do Hyeon', sans-serif; font-weight: 400; }
+  button { touch-action: manipulation; }
 
-  #app { position: fixed; inset: 0; }
+  #app { position: fixed; inset: 0; height: 100vh; overflow: hidden; }
 
   .screen {
     position: absolute; inset: 0; display: none;
@@ -55,6 +56,7 @@
     color: #fff; font-family: 'Do Hyeon', sans-serif;
     font-size: 15px; letter-spacing: 0.02em;
     padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;
+    padding-top: max(7px, env(safe-area-inset-top));
   }
   .win-btns { display: flex; gap: 5px; }
   .win-btns span {
@@ -65,34 +67,45 @@
   }
   .win-btns .x { background: #ffd7d2; color: var(--red); }
   .win-body {
-    padding: 20px 22px 24px;
+    padding: 18px 20px 22px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     text-align: center;
   }
   .win-body.center { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 
-  /* ---------- title screen ---------- */
+  /* ---------- title / entry screen ---------- */
   #scr-title h1 {
-    font-size: clamp(24px, 5.4vw, 34px);
+    font-size: clamp(24px, 6vw, 34px);
     line-height: 1.25; margin: 4px 0 2px; color: var(--win-blue-2);
   }
   #scr-title h1 b { color: var(--red); }
   .tag { font-size: 13px; color: #445; margin: 0 0 10px; }
-  .best-record {
+  .lb-teaser {
     font-size: 12px; color: var(--gold); background: #fff7e0;
     border: 1px solid var(--gold); border-radius: 4px;
-    padding: 5px 8px; margin: 0 0 14px; display: inline-block;
+    padding: 6px 10px; margin: 0 0 14px; display: inline-block;
   }
-  .best-record:empty { display: none; }
+  .lb-teaser:empty { display: none; }
+
   .opt-group { margin-bottom: 14px; text-align: left; }
   .opt-label { font-size: 12px; color: #445; margin: 0 0 6px; font-family: 'Do Hyeon', sans-serif; }
-  .opt-row { display: flex; gap: 6px; justify-content: center; }
+  .opt-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
   .opt-btn {
-    flex: 1; font-family: 'Nanum Gothic Coding', monospace; font-weight: 700;
-    font-size: 13px; padding: 8px 6px; border-radius: 4px;
+    flex: 1 1 auto; min-width: 88px; min-height: 42px;
+    font-family: 'Nanum Gothic Coding', monospace; font-weight: 700;
+    font-size: 13px; padding: 9px 6px; border-radius: 4px;
     border: 2px solid #7c93bd; background: #fff; color: #345; cursor: pointer;
   }
   .opt-btn.active { background: var(--win-blue-1); color: #fff; border-color: var(--win-blue-2); }
+  .dept-row .opt-btn { flex-basis: 30%; font-size: 12.5px; padding: 10px 4px; }
+
+  .nick-input {
+    width: 100%; font-family: 'Nanum Gothic Coding', monospace; font-weight: 700;
+    font-size: 16px; padding: 11px 12px; border-radius: 4px;
+    border: 2px solid #7c93bd; background: #fff; color: #182238; outline: none;
+  }
+  .nick-input.err, .opt-row.err .opt-btn { border-color: var(--red-bright); }
 
   .stage-preview {
     list-style: none; margin: 0 0 16px; padding: 10px 12px;
@@ -102,15 +115,14 @@
 
   .start-btn {
     font-family: 'Do Hyeon', sans-serif; font-size: 18px;
-    padding: 11px 30px; border-radius: 5px; cursor: pointer;
+    padding: 13px 30px; min-height: 48px; border-radius: 5px; cursor: pointer;
     background: linear-gradient(180deg, var(--red-bright), var(--red));
     color: #fff; border: 2px solid #6f1c0f;
     box-shadow: 0 3px 0 #5c1810;
   }
   .start-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #5c1810; }
   .hint-line { font-size: 11px; color: #667; margin-top: 12px; }
-
-  .pnum { font-family: 'Do Hyeon', sans-serif; font-size: 26px; color: var(--win-blue-2); margin: 0; }
+  .form-err { font-size: 12px; color: var(--red-bright); min-height: 16px; margin: -6px 0 4px; }
 
   /* ---------- stage intro ---------- */
   .stage-tag { font-size: 12px; color: var(--gold); font-family: 'Do Hyeon', sans-serif; margin: 0; }
@@ -123,10 +135,6 @@
   }
   .verse-box sup { color: var(--red); font-weight: 700; margin-right: 1px; }
   .verse-box.done { background: #fff8e8; border-color: var(--gold); }
-  .countdown {
-    font-family: 'Do Hyeon', sans-serif; font-size: 44px; color: var(--red);
-    margin-top: 4px;
-  }
 
   /* ---------- gameplay ---------- */
   #scr-game { padding: 0; }
@@ -138,18 +146,20 @@
 
   #hud {
     position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px; font-size: 13px; color: #fff;
+    padding: 8px 10px; font-size: 12.5px; color: #fff;
     background: rgba(10, 16, 40, 0.55);
+    padding-top: max(8px, env(safe-area-inset-top));
   }
-  .hud-left, .hud-right { display: flex; gap: 10px; align-items: center; }
-  #hud-lives { font-size: 16px; letter-spacing: 3px; color: var(--red-bright); }
+  .hud-left, .hud-right { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  #hud-nick { color: var(--gold-bright); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22vw; }
+  #hud-lives { font-size: 16px; letter-spacing: 3px; color: var(--red-bright); flex: none; }
   #hud-combo { color: var(--gold-bright); font-weight: 700; }
 
   #fall-field { position: relative; z-index: 1; flex: 1; overflow: hidden; width: 100%; }
   #scr-game.active { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; }
 
   #danger-line {
-    position: absolute; left: 0; right: 0; bottom: 66px;
+    position: absolute; left: 0; right: 0; bottom: 62px;
     border-top: 2px dashed rgba(224, 71, 58, 0.75); z-index: 1;
   }
   #danger-line::after {
@@ -158,11 +168,11 @@
   }
 
   .phrase {
-    position: absolute; top: 0; left: 50%; max-width: min(88vw, 480px);
+    position: absolute; top: 0; left: 50%; max-width: min(90vw, 480px);
     transform: translate(-50%, -40px);
     background: rgba(255, 255, 255, 0.92);
     border: 2px solid #223a5e; border-radius: 6px;
-    padding: 6px 12px; font-size: clamp(13px, 2.6vw, 17px);
+    padding: 6px 12px; font-size: clamp(14px, 4.4vw, 18px);
     font-weight: 700; text-align: center; white-space: normal;
     box-shadow: 2px 3px 0 rgba(0,0,0,0.25);
     pointer-events: none;
@@ -191,12 +201,13 @@
 
   #typing-bar {
     position: relative; z-index: 2; display: flex; align-items: center; gap: 8px;
-    padding: 10px 12px; background: rgba(10, 16, 40, 0.85);
+    padding: 10px; background: rgba(10, 16, 40, 0.85);
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
   #typing-caret { color: var(--gold-bright); font-size: 18px; font-weight: 700; }
   #typing-input {
-    flex: 1; font-family: 'Nanum Gothic Coding', monospace; font-size: 17px;
-    padding: 8px 10px; border-radius: 4px; border: 2px solid #7c93bd;
+    flex: 1; min-width: 0; font-family: 'Nanum Gothic Coding', monospace; font-size: 16px;
+    padding: 10px; border-radius: 4px; border: 2px solid #7c93bd;
     background: #fff; color: #182238; outline: none;
   }
   #typing-input.mistype { border-color: var(--red-bright); background: #ffe9e6; }
@@ -219,40 +230,47 @@
   .stat-num { display: block; font-family: 'Do Hyeon', sans-serif; font-size: 19px; color: var(--red); }
   .stat-lbl { display: block; font-size: 10px; color: #667; margin-top: 2px; }
 
-  #final-table { width: 100%; font-size: 12px; }
-  #final-table table { width: 100%; border-collapse: collapse; }
-  #final-table th, #final-table td { border: 1px solid #9ab; padding: 6px 4px; text-align: center; }
-  #final-table th { background: var(--win-blue-1); color: #fff; font-family: 'Do Hyeon', sans-serif; font-weight: 400; }
-  #final-table td.win { background: #fff3c4; font-weight: 700; color: var(--red); }
-  #final-record-note { font-size: 12px; color: var(--gold); margin: 8px 0; }
+  #final-table, #final-leaderboard { width: 100%; font-size: 12px; }
+  #final-table table, #final-leaderboard table { width: 100%; border-collapse: collapse; }
+  #final-table th, #final-table td, #final-leaderboard th, #final-leaderboard td { border: 1px solid #9ab; padding: 6px 4px; text-align: center; }
+  #final-table th, #final-leaderboard th { background: var(--win-blue-1); color: #fff; font-family: 'Do Hyeon', sans-serif; font-weight: 400; }
+  #final-leaderboard tr.me { background: #fff3c4; font-weight: 700; color: var(--red); }
+  .final-section-title { font-size: 13px; color: var(--win-blue-2); font-family: 'Do Hyeon', sans-serif; margin: 10px 0 4px; }
+  #final-rank-note { font-size: 12px; color: var(--gold); margin: 6px 0 0; min-height: 14px; }
   .final-btn-row { display: flex; gap: 10px; margin-top: 6px; }
 
   .hidden { display: none !important; }
 
   @media (max-width: 420px) {
-    .win-body { padding: 16px 14px 18px; }
+    .win-body { padding: 14px 12px 18px; }
     .stage-preview { font-size: 11px; }
+    .dept-row .opt-btn { font-size: 11.5px; min-width: 0; }
   }
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- title -->
+  <!-- title / entry -->
   <section id="scr-title" class="screen active">
     <div class="win98">
       <div class="win-titlebar"><span>한메타자교실.exe</span><div class="win-btns"><span>_</span><span>&#9633;</span><span class="x">&times;</span></div></div>
       <div class="win-body">
         <h1>두유 노우<br /><b>한메 타자교실?</b></h1>
-        <p class="tag">베드로의 네 장면, 손끝으로 새기는 한글 타자 대결</p>
-        <div class="best-record" id="best-record"></div>
+        <p class="tag">베드로의 네 장면, 손끝으로 새기는 한글 타자 게임</p>
+        <div class="lb-teaser" id="lb-teaser"></div>
 
         <div class="opt-group">
-          <p class="opt-label">모드 선택</p>
-          <div class="opt-row" id="mode-row">
-            <button data-mode="solo" class="opt-btn active">1인 연습</button>
-            <button data-mode="duo" class="opt-btn">2인 대결</button>
+          <p class="opt-label">1. 부서를 골라주세요</p>
+          <div class="opt-row dept-row" id="dept-row">
+            <button data-dept="송림 청소년" class="opt-btn">송림<br />청소년</button>
+            <button data-dept="서현 중등부" class="opt-btn">서현<br />중등부</button>
+            <button data-dept="서현 고등부" class="opt-btn">서현<br />고등부</button>
           </div>
+        </div>
+        <div class="opt-group">
+          <p class="opt-label">2. 닉네임을 입력해주세요</p>
+          <input type="text" id="nick-input" class="nick-input" placeholder="닉네임 (최대 10자)" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
         </div>
         <div class="opt-group">
           <p class="opt-label">난이도</p>
@@ -270,19 +288,11 @@
           <li>4. 회복 — 요한복음 21:15-17</li>
         </ol>
 
+        <p class="form-err" id="form-err"></p>
         <button id="btn-start" class="start-btn">▶ 시작하기</button>
-        <p class="hint-line">PC 키보드 권장 · 떨어지는 구절이 위험선에 닿기 전에 입력해서 지켜내세요</p>
+        <p class="hint-line">떨어지는 구절이 위험선에 닿기 전에 입력해서 지켜내세요</p>
       </div>
     </div>
-  </section>
-
-  <!-- player ready (duo) -->
-  <section id="scr-playerready" class="screen">
-    <div class="win98"><div class="win-body center">
-      <p class="pnum" id="pready-num">PLAYER 1</p>
-      <p>키보드 앞에 앉으세요. 준비되면 시작!</p>
-      <button id="btn-pready-go" class="start-btn">▶ 시작</button>
-    </div></div>
   </section>
 
   <!-- stage intro -->
@@ -292,7 +302,7 @@
       <h2 id="si-title"></h2>
       <p class="verse-ref" id="si-ref"></p>
       <div class="verse-box" id="si-verse"></div>
-      <div class="countdown" id="si-count">3</div>
+      <button id="btn-stage-go" class="start-btn">▶ 시작하기</button>
     </div></div>
   </section>
 
@@ -302,7 +312,7 @@
     <div id="hud">
       <div class="hud-left">
         <span id="hud-stage-lbl">1/4 부르심</span>
-        <span id="hud-player-lbl" class="hidden"></span>
+        <span id="hud-nick"></span>
       </div>
       <div id="hud-lives">♥♥♥</div>
       <div class="hud-right">
@@ -320,7 +330,7 @@
     <div id="pause-overlay" class="hidden">
       <div class="win98"><div class="win-body center">
         <h2>잠시 멈춤</h2>
-        <p style="font-size:12px;color:#667;margin:0;">Esc 키로 다시 열 수 있어요</p>
+        <p style="font-size:12px;color:#667;margin:0;">Esc 키 또는 아래 버튼으로 다시 열 수 있어요</p>
         <button id="btn-resume" class="start-btn">계속하기</button>
       </div></div>
     </div>
@@ -345,8 +355,11 @@
   <section id="scr-final" class="screen">
     <div class="win98"><div class="win-body center">
       <h2 id="final-headline">완주!</h2>
+      <p class="final-section-title">내 기록</p>
       <div id="final-table"></div>
-      <div id="final-record-note"></div>
+      <p class="final-section-title">역대 TOP 5</p>
+      <div id="final-leaderboard"></div>
+      <p id="final-rank-note"></p>
       <div class="final-btn-row">
         <button id="btn-restart" class="start-btn">처음으로</button>
       </div>
@@ -487,13 +500,13 @@
 
   var STAGE_MULT = [1.0, 1.05, 1.2, 1.08];
   var LANES = [18, 50, 82];
-  var DANGER_OFFSET = 66;
+  var DANGER_OFFSET = 62;
   var DIFF = {
     easy:   { label: '쉬움',   fallSpeed: 40, spawnInterval: 2700, maxConcurrent: 2 },
     normal: { label: '보통',   fallSpeed: 60, spawnInterval: 2150, maxConcurrent: 3 },
     hard:   { label: '어려움', fallSpeed: 86, spawnInterval: 1700, maxConcurrent: 3 }
   };
-  var BEST_KEY = 'hanme-typing-best-v1';
+  var LB_KEY = 'hanme-typing-leaderboard-v1';
 
   // ---------------- DOM shortcuts ----------------
   function $(id) { return document.getElementById(id); }
@@ -502,6 +515,22 @@
     for (var i = 0; i < list.length; i++) list[i].classList.remove('active');
     $(id).classList.add('active');
   }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ---------------- mobile viewport height (keyboard-aware) ----------------
+  function setAppHeight() {
+    var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    $('app').style.height = h + 'px';
+    if (rt) recomputeDangerY();
+  }
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', setAppHeight);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
 
   // ---------------- audio (WebAudio, no assets) ----------------
   var actx = null;
@@ -534,18 +563,50 @@
     else if (name === 'start') { beep(660, 0.09, 'square', 0.1); }
   }
 
+  // ---------------- leaderboard (localStorage — shared-device Top 5) ----------------
+  function loadLeaderboard() {
+    try { var raw = localStorage.getItem(LB_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function saveLeaderboard(list) {
+    try { localStorage.setItem(LB_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function addLeaderboardEntry(entry) {
+    var list = loadLeaderboard();
+    entry.id = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7);
+    list.push(entry);
+    list.sort(function (a, b) { return b.score - a.score; });
+    if (list.length > 200) list = list.slice(0, 200);
+    saveLeaderboard(list);
+    var rank = -1;
+    for (var i = 0; i < list.length; i++) { if (list[i].id === entry.id) { rank = i + 1; break; } }
+    return { list: list, rank: rank, entry: entry };
+  }
+  function deptShort(dept) {
+    if (dept === '송림 청소년') return '송림';
+    if (dept === '서현 중등부') return '서현중';
+    if (dept === '서현 고등부') return '서현고';
+    return dept || '';
+  }
+  function renderTeaser() {
+    var list = loadLeaderboard();
+    var el = $('lb-teaser');
+    if (!list.length) { el.textContent = ''; return; }
+    var top = list[0];
+    el.textContent = '역대 1위 — ' + top.nickname + '(' + deptShort(top.dept) + ') ' + top.score + '점';
+  }
+  renderTeaser();
+
   // ---------------- state ----------------
   var state = {
-    mode: 'solo',
+    dept: null,
+    nickname: '',
     difficulty: 'normal',
-    players: [],
-    currentPlayerIndex: 0,
-    currentStage: 0
+    currentStage: 0,
+    results: []
   };
 
-  function mkPlayer(name) { return { name: name, results: [] }; }
-
-  // ---------------- title screen wiring ----------------
+  // ---------------- title / entry wiring ----------------
   function wireOptRow(rowId, key, valueAttr) {
     var row = $(rowId);
     row.addEventListener('click', function (e) {
@@ -554,47 +615,46 @@
       var siblings = row.querySelectorAll('.opt-btn');
       for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('active');
       btn.classList.add('active');
+      row.classList.remove('err');
       state[key] = btn.getAttribute(valueAttr);
     });
   }
-  wireOptRow('mode-row', 'mode', 'data-mode');
+  wireOptRow('dept-row', 'dept', 'data-dept');
   wireOptRow('diff-row', 'difficulty', 'data-diff');
 
-  function loadBest() {
-    try {
-      var raw = localStorage.getItem(BEST_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
-  }
-  function saveBestIfBetter(totalScore, avgCpm) {
-    var best = loadBest();
-    if (!best || totalScore > best.score) {
-      best = { score: totalScore, cpm: avgCpm };
-      try { localStorage.setItem(BEST_KEY, JSON.stringify(best)); } catch (e) {}
-    }
-    return best;
-  }
-  function renderBest() {
-    var best = loadBest();
-    $('best-record').textContent = best ? ('나의 최고 기록 — 점수 ' + best.score + ' · ' + best.cpm + '타/분') : '';
-  }
-  renderBest();
-
-  $('btn-start').addEventListener('click', function () {
-    getCtx(); sfx('start');
-    state.players = state.mode === 'duo' ? [mkPlayer('PLAYER 1'), mkPlayer('PLAYER 2')] : [mkPlayer('PLAYER 1')];
-    state.currentPlayerIndex = 0;
-    if (state.mode === 'duo') showPlayerReady(0);
-    else { state.currentStage = 0; startStage(0); }
+  $('nick-input').addEventListener('input', function () {
+    $('nick-input').classList.remove('err');
   });
 
-  function showPlayerReady(idx) {
-    state.currentPlayerIndex = idx;
-    state.currentStage = 0;
-    $('pready-num').textContent = state.players[idx].name;
-    showScreen('scr-playerready');
+  function resetEntryForm() {
+    state.dept = null;
+    state.nickname = '';
+    var deptBtns = $('dept-row').querySelectorAll('.opt-btn');
+    for (var i = 0; i < deptBtns.length; i++) deptBtns[i].classList.remove('active');
+    $('dept-row').classList.remove('err');
+    $('nick-input').value = '';
+    $('nick-input').classList.remove('err');
+    $('form-err').textContent = '';
   }
-  $('btn-pready-go').addEventListener('click', function () { sfx('start'); startStage(0); });
+
+  $('btn-start').addEventListener('click', function () {
+    var nick = $('nick-input').value.trim();
+    var ok = true;
+    if (!state.dept) { $('dept-row').classList.add('err'); ok = false; }
+    if (!nick) { $('nick-input').classList.add('err'); ok = false; }
+    if (!ok) {
+      $('form-err').textContent = '부서와 닉네임을 모두 입력해 주세요';
+      var box = document.querySelector('#scr-title .win98');
+      box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+      return;
+    }
+    $('form-err').textContent = '';
+    state.nickname = nick;
+    getCtx(); sfx('start');
+    state.currentStage = 0;
+    state.results = [];
+    startStage(0);
+  });
 
   // ---------------- verse rendering ----------------
   function verseHTML(stage) {
@@ -603,8 +663,7 @@
     }).join(' ');
   }
 
-  // ---------------- stage intro / countdown ----------------
-  var countdownTimer = null;
+  // ---------------- stage intro (tap-to-start, keeps mobile keyboard gesture) ----------------
   function startStage(stageIdx) {
     state.currentStage = stageIdx;
     var stage = STAGES[stageIdx];
@@ -613,21 +672,12 @@
     $('si-ref').textContent = stage.ref;
     $('si-verse').innerHTML = verseHTML(stage);
     showScreen('scr-stageintro');
-
-    var n = 3;
-    $('si-count').textContent = n;
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(function () {
-      n--;
-      if (n > 0) { $('si-count').textContent = n; }
-      else if (n === 0) { $('si-count').textContent = '시작!'; }
-      else {
-        clearInterval(countdownTimer);
-        showScreen('scr-game');
-        beginGameplay(stageIdx);
-      }
-    }, 700);
   }
+  $('btn-stage-go').addEventListener('click', function () {
+    var stageIdx = state.currentStage;
+    showScreen('scr-game');
+    beginGameplay(stageIdx); // focuses input synchronously — keeps this a user gesture for mobile keyboards
+  });
 
   // ---------------- gameplay ----------------
   var rt = null; // runtime state for current stage attempt
@@ -655,14 +705,11 @@
     var diff = DIFF[state.difficulty];
     var field = $('fall-field');
     var danger = $('danger-line');
-    // clear previous phrase elements but keep danger-line
     Array.prototype.slice.call(field.querySelectorAll('.phrase, .popup')).forEach(function (n) { n.remove(); });
 
     $('game-bg').className = 'bg-' + stageIdx;
     $('hud-stage-lbl').textContent = (stageIdx + 1) + '/' + STAGES.length + ' ' + stage.title.split(' — ')[0];
-    var plabel = $('hud-player-lbl');
-    if (state.mode === 'duo') { plabel.classList.remove('hidden'); plabel.textContent = state.players[state.currentPlayerIndex].name; }
-    else { plabel.classList.add('hidden'); }
+    $('hud-nick').textContent = state.nickname;
 
     rt = {
       stageIdx: stageIdx,
@@ -696,12 +743,13 @@
     input.value = '';
     input.classList.remove('mistype');
     input.oninput = handleInput;
-    setTimeout(function () { input.focus(); }, 30);
+    input.focus(); // synchronous — called directly from the tap handler chain
 
     rt.rafId = requestAnimationFrame(gameLoop);
   }
 
   function recomputeDangerY() {
+    if (!rt) return;
     var field = $('fall-field');
     rt.dangerY = field.clientHeight - DANGER_OFFSET - 20;
   }
@@ -857,7 +905,7 @@
       score: rt.score, cpm: cpm, completion: completion, maxCombo: rt.maxCombo,
       cleared: cleared, elapsedMs: elapsedMs
     };
-    state.players[state.currentPlayerIndex].results[rt.stageIdx] = result;
+    state.results[rt.stageIdx] = result;
 
     var stage = STAGES[rt.stageIdx];
     $('sr-headline').textContent = cleared ? (stage.title + ' — 완주!') : (stage.title + ' — 여기까지');
@@ -874,73 +922,49 @@
   $('btn-next-stage').addEventListener('click', function () {
     var next = state.currentStage + 1;
     if (next < STAGES.length) { startStage(next); }
-    else { finishPlayerRun(); }
+    else { showFinal(); }
   });
 
-  function finishPlayerRun() {
-    if (state.mode === 'duo' && state.currentPlayerIndex === 0) {
-      showPlayerReady(1);
-    } else {
-      showFinal();
-    }
-  }
-
-  function totalsFor(player) {
-    var score = 0, cpmSum = 0, completionSum = 0, n = player.results.length;
-    player.results.forEach(function (r) {
-      if (!r) return;
-      score += r.score; cpmSum += r.cpm; completionSum += r.completion;
-    });
-    return {
-      score: score,
-      avgCpm: n ? Math.round(cpmSum / n) : 0,
-      avgCompletion: n ? Math.round(completionSum / n) : 0
-    };
+  function totals() {
+    var score = 0, cpmSum = 0, n = state.results.length;
+    state.results.forEach(function (r) { if (!r) return; score += r.score; cpmSum += r.cpm; });
+    return { score: score, avgCpm: n ? Math.round(cpmSum / n) : 0 };
   }
 
   function showFinal() {
-    if (state.mode === 'solo') {
-      var p = state.players[0];
-      var t = totalsFor(p);
-      $('final-headline').textContent = '완주! 총점 ' + t.score;
-      var rows = '<table><tr><th>장면</th><th>점수</th><th>타/분</th><th>완료율</th></tr>';
-      STAGES.forEach(function (s, i) {
-        var r = p.results[i] || { score: 0, cpm: 0, completion: 0 };
-        rows += '<tr><td>' + (i + 1) + '. ' + s.title.split(' — ')[0] + '</td><td>' + r.score + '</td><td>' + r.cpm + '</td><td>' + r.completion + '%</td></tr>';
-      });
-      rows += '</table>';
-      $('final-table').innerHTML = rows;
-      var best = saveBestIfBetter(t.score, t.avgCpm);
-      $('final-record-note').textContent = (t.score >= best.score) ? '새로운 최고 기록입니다! 🎉' : ('최고 기록 — 점수 ' + best.score + ' · ' + best.cpm + '타/분');
-    } else {
-      var p1 = state.players[0], p2 = state.players[1];
-      var t1 = totalsFor(p1), t2 = totalsFor(p2);
-      var winnerIsP1 = t1.score === t2.score ? (t1.avgCompletion >= t2.avgCompletion) : (t1.score > t2.score);
-      var winner = winnerIsP1 ? p1.name : p2.name;
-      $('final-headline').textContent = (t1.score === t2.score && t1.avgCompletion === t2.avgCompletion) ? '무승부!' : (winner + ' 승리! 🏆');
+    var t = totals();
+    $('final-headline').textContent = state.nickname + '님, 완주! 총점 ' + t.score;
 
-      var rows = '<table><tr><th>장면</th><th>PLAYER 1</th><th>PLAYER 2</th></tr>';
-      STAGES.forEach(function (s, i) {
-        var r1 = p1.results[i] || { score: 0 };
-        var r2 = p2.results[i] || { score: 0 };
-        var c1 = r1.score >= r2.score ? ' class="win"' : '';
-        var c2 = r2.score > r1.score ? ' class="win"' : '';
-        rows += '<tr><td>' + (i + 1) + '. ' + s.title.split(' — ')[0] + '</td><td' + c1 + '>' + r1.score + '</td><td' + c2 + '>' + r2.score + '</td></tr>';
-      });
-      rows += '<tr><td><b>총점</b></td><td' + (winnerIsP1 ? ' class="win"' : '') + '><b>' + t1.score + '</b></td><td' + (!winnerIsP1 ? ' class="win"' : '') + '><b>' + t2.score + '</b></td></tr>';
-      rows += '</table>';
-      $('final-table').innerHTML = rows;
-      $('final-record-note').textContent = 'PLAYER 1 평균 ' + t1.avgCpm + '타/분 · PLAYER 2 평균 ' + t2.avgCpm + '타/분';
-    }
-    renderBest();
+    var rows = '<table><tr><th>장면</th><th>점수</th><th>타/분</th><th>완료율</th></tr>';
+    STAGES.forEach(function (s, i) {
+      var r = state.results[i] || { score: 0, cpm: 0, completion: 0 };
+      rows += '<tr><td>' + (i + 1) + '. ' + s.title.split(' — ')[0] + '</td><td>' + r.score + '</td><td>' + r.cpm + '</td><td>' + r.completion + '%</td></tr>';
+    });
+    rows += '</table>';
+    $('final-table').innerHTML = rows;
+
+    var saved = addLeaderboardEntry({ dept: state.dept, nickname: state.nickname, score: t.score, cpm: t.avgCpm });
+    var top5 = saved.list.slice(0, 5);
+    var lbRows = '<table><tr><th>#</th><th>닉네임</th><th>부서</th><th>점수</th></tr>';
+    var medals = ['🥇', '🥈', '🥉'];
+    top5.forEach(function (e, i) {
+      var rankLabel = medals[i] || String(i + 1);
+      var isMe = e.id === saved.entry.id;
+      lbRows += '<tr' + (isMe ? ' class="me"' : '') + '><td>' + rankLabel + '</td><td>' + escapeHtml(e.nickname) + '</td><td>' + escapeHtml(deptShort(e.dept)) + '</td><td>' + e.score + '</td></tr>';
+    });
+    lbRows += '</table>';
+    $('final-leaderboard').innerHTML = lbRows;
+    $('final-rank-note').textContent = saved.rank > 5 ? ('내 순위: 전체 ' + saved.rank + '위 (' + t.score + '점)') : '';
+
+    renderTeaser();
     showScreen('scr-final');
   }
 
   $('btn-restart').addEventListener('click', function () {
+    resetEntryForm();
+    renderTeaser();
     showScreen('scr-title');
   });
-
-  window.addEventListener('resize', function () { if (rt) recomputeDangerY(); });
 
 })();
 </script>
